@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OzeenExam Pro | Advanced Management</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Hind Siliguri', sans-serif; transition: background 0.3s; scroll-behavior: smooth; }
+        .hidden { display: none !important; }
+        
+        #loading-bar { position: fixed; top: 0; left: 0; height: 3px; background: #4f46e5; width: 0%; z-index: 10000; transition: width 0.4s ease; }
+        #global-loader { position: fixed; inset: 0; background: #ffffff; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+        .option-card { cursor: pointer; border: 2px solid #f1f5f9; transition: 0.2s; }
+        .option-card:hover { border-color: #c7d2fe; transform: scale(1.01); }
+        .option-selected { border-color: #4f46e5 !important; background: #eef2ff !important; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1); }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .view-section { animation: fadeIn 0.4s ease-out; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+
+    <div id="loading-bar"></div>
+    <div id="global-loader">
+        <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+        <p id="loader-text" class="mt-4 font-bold text-indigo-600">প্রসেস হচ্ছে...</p>
+    </div>
+
+    <div id="view-auth" class="fixed inset-0 z-[100] bg-indigo-900 flex items-center justify-center p-6">
+        <div class="bg-white p-10 rounded-[3rem] shadow-2xl max-w-sm w-full text-center">
+            <h1 class="text-4xl font-black text-indigo-600 mb-2">OzeenExam</h1>
+            <button id="btn-google-login" class="w-full py-4 bg-white border-2 border-slate-100 rounded-2xl font-bold flex items-center justify-center gap-3 hover:border-indigo-500 transition shadow-sm active:scale-95">
+                <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" class="w-6 h-6">
+                গুগল দিয়ে লগইন করুন
+            </button>
+        </div>
+    </div>
+
+    <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-3 cursor-pointer" onclick="navigate('home')">
+            <div class="bg-indigo-600 text-white w-10 h-10 rounded-xl flex items-center justify-center font-black shadow-lg">O</div>
+            <h2 class="font-bold text-xl">OzeenExam <span class="text-indigo-600">Pro</span></h2>
+        </div>
+        <div id="nav-user" class="hidden flex items-center gap-3">
+            <img id="user-avatar" class="w-9 h-9 rounded-full border-2 border-indigo-100">
+            <button onclick="checkAdmin()" class="p-2.5 bg-slate-50 border rounded-xl hover:bg-indigo-50 transition">⚙️</button>
+        </div>
+    </nav>
+
+    <main class="max-w-5xl mx-auto p-4 md:p-8">
+
+        <div id="view-home" class="view-section space-y-8">
+            <div class="bg-gradient-to-br from-indigo-600 to-violet-700 p-10 rounded-[3rem] text-white shadow-xl">
+                <h2 class="text-3xl font-black mb-2">হ্যালো, <span id="user-greeting">User</span>!</h2>
+                <p class="opacity-80">পরীক্ষা দেওয়ার জন্য প্রস্তুত তো?</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div onclick="navigate('exams')" class="bg-white p-8 rounded-[2.5rem] border hover:shadow-xl cursor-pointer transition">
+                    <span class="text-4xl mb-4 inline-block">📝</span>
+                    <h3 class="text-2xl font-black">Live Exams</h3>
+                    <p class="text-slate-500 mt-2">অংশগ্রহণ করুন এবং নিজেকে যাচাই করুন।</p>
+                </div>
+                <div onclick="navigate('results')" class="bg-white p-8 rounded-[2.5rem] border hover:shadow-xl cursor-pointer transition">
+                    <span class="text-4xl mb-4 inline-block">📊</span>
+                    <h3 class="text-2xl font-black">My Results</h3>
+                    <p class="text-slate-500 mt-2">ফলাফল এবং সার্টিফিকেট ডাউনলোড।</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-exams" class="hidden view-section space-y-6">
+            <h2 class="text-3xl font-black">Available Examinations</h2>
+            <div id="exam-container" class="grid gap-4"></div>
+        </div>
+
+        <div id="view-active-exam" class="hidden">
+            <div class="fixed top-16 left-0 right-0 z-40 bg-white border-b p-4 flex justify-between items-center px-10 shadow-sm">
+                <h3 id="active-exam-name" class="font-bold text-indigo-600"></h3>
+                <div id="exam-timer" class="text-2xl font-black text-red-500 font-mono">00:00</div>
+            </div>
+            <div id="question-payload" class="mt-24 space-y-8 pb-32"></div>
+            <div class="fixed bottom-0 left-0 right-0 p-6 bg-white/90 backdrop-blur-md border-t flex justify-center">
+                <button onclick="processSubmission()" class="max-w-xl w-full bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-indigo-700 transition">Submit Now</button>
+            </div>
+        </div>
+
+        <div id="view-results" class="hidden view-section space-y-6">
+            <h2 class="text-3xl font-black">Your Progress</h2>
+            <div id="results-container" class="grid gap-6"></div>
+        </div>
+
+        <div id="view-admin" class="hidden view-section space-y-8 pb-20">
+            <div class="flex justify-between items-center">
+                <h2 class="text-3xl font-black text-slate-800">Teacher Control Panel</h2>
+                <button onclick="navigate('home')" class="bg-slate-900 text-white px-6 py-2 rounded-xl font-bold">Exit</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="md:col-span-2 bg-white p-8 rounded-[2.5rem] border space-y-4">
+                    <h3 class="text-xl font-black">Create New Exam</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <input id="adm-title" placeholder="Exam Title" class="p-4 bg-slate-50 border rounded-2xl outline-none">
+                        <div class="grid grid-cols-3 gap-2">
+                            <input id="adm-dur" type="number" placeholder="Min" class="p-4 bg-slate-50 border rounded-2xl outline-none">
+                            <input id="adm-neg" type="number" step="0.25" placeholder="Neg" class="p-4 bg-slate-50 border rounded-2xl outline-none">
+                            <input id="adm-pass" placeholder="Pass" class="p-4 bg-slate-50 border rounded-2xl outline-none">
+                        </div>
+                    </div>
+                    <textarea id="adm-bulk" rows="4" class="w-full p-4 bg-slate-50 border rounded-2xl font-mono text-xs outline-none" placeholder="Format: Q | A | B | C | D | CorrectIdx"></textarea>
+                    <button onclick="publishExam()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-indigo-100 shadow-xl">Publish Now</button>
+                </div>
+                <div class="bg-indigo-600 p-10 rounded-[2.5rem] text-white flex flex-col items-center justify-center">
+                    <p class="uppercase text-xs font-bold opacity-70 mb-2">Total Submissions</p>
+                    <h4 id="stat-total" class="text-6xl font-black">0</h4>
+                </div>
+            </div>
+
+            <div class="bg-white p-8 rounded-[2.5rem] border shadow-sm">
+                <h3 class="text-xl font-black mb-6">Published Examinations</h3>
+                <div id="admin-exams-list" class="grid gap-4"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, getDoc, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDPinc2n9gR1dVkdqWW4kzgicj0nSjS2MM",
+            authDomain: "ozeen879.firebaseapp.com",
+            projectId: "ozeen879",
+            storageBucket: "ozeen879.firebasestorage.app",
+            messagingSenderId: "763379422148",
+            appId: "1:763379422148:web:e773964c827f3c66deca91"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        window.state = { user: null, activeExam: null, answers: {}, timer: null };
+
+        window.updateProgress = (percent, text) => {
+            document.getElementById('loading-bar').style.width = percent + '%';
+            if(text) document.getElementById('loader-text').innerText = text;
+            if(percent >= 100) {
+                setTimeout(() => document.getElementById('global-loader').classList.add('hidden'), 500);
+            } else {
+                document.getElementById('global-loader').classList.remove('hidden');
+            }
+        };
+
+        window.navigate = async (view) => {
+            window.updateProgress(40, "লোড হচ্ছে...");
+            const sections = ['home', 'exams', 'active-exam', 'results', 'admin'];
+            sections.forEach(s => document.getElementById(`view-${s}`).classList.add('hidden'));
+            
+            if(view === 'exams') await syncExams();
+            if(view === 'results') await syncResults();
+            if(view === 'admin') await syncAdmin();
+            
+            document.getElementById(`view-${view}`).classList.remove('hidden');
+            window.updateProgress(100);
+        };
+
+        // Auth
+        document.getElementById('btn-google-login').onclick = () => signInWithPopup(auth, provider);
+        onAuthStateChanged(auth, (user) => {
+            if(user) {
+                window.state.user = user;
+                document.getElementById('view-auth').classList.add('hidden');
+                document.getElementById('nav-user').classList.remove('hidden');
+                document.getElementById('user-avatar').src = user.photoURL;
+                document.getElementById('user-greeting').innerText = user.displayName.split(' ')[0];
+                window.navigate('home');
+            } else {
+                document.getElementById('view-auth').classList.remove('hidden');
+            }
+        });
+
+        // Exam
+        async function syncExams() {
+            const snap = await getDocs(collection(db, "exams"));
+            const resSnap = await getDocs(query(collection(db, "results"), where("uid", "==", window.state.user.uid)));
+            const completed = resSnap.docs.map(d => d.data().examId);
+            const container = document.getElementById('exam-container');
+            container.innerHTML = '';
+            
+            snap.forEach(d => {
+                const ex = d.data();
+                const isDone = completed.includes(d.id);
+                container.innerHTML += `
+                    <div class="bg-white p-6 rounded-[2rem] border flex justify-between items-center">
+                        <div>
+                            <h4 class="text-xl font-bold">${ex.title}</h4>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${ex.duration} Mins • ${ex.questions.length} Qs</p>
+                        </div>
+                        <button onclick="${isDone ? `alert('Finished')` : `initiateGatekeeper('${d.id}')`}" 
+                                class="px-8 py-3 rounded-2xl font-black text-sm ${isDone ? 'bg-slate-100 text-slate-400' : 'bg-indigo-600 text-white'} transition">
+                            ${isDone ? 'Done' : 'Start'}
+                        </button>
+                    </div>`;
+            });
+        }
+
+        window.initiateGatekeeper = async (id) => {
+            const pass = prompt("Exam Password:");
+            const snap = await getDoc(doc(db, "exams", id));
+            if(pass === snap.data().password) window.startExamCycle(id);
+            else if(pass !== null) alert("Wrong!");
+        };
+
+        window.startExamCycle = async (id) => {
+            window.updateProgress(50, "প্রশ্নপত্র তৈরি হচ্ছে...");
+            const snap = await getDoc(doc(db, "exams", id));
+            window.state.activeExam = { id, ...snap.data() };
+            window.state.answers = {};
+            
+            document.getElementById('view-exams').classList.add('hidden');
+            document.getElementById('view-active-exam').classList.remove('hidden');
+            document.getElementById('active-exam-name').innerText = window.state.activeExam.title;
+            
+            const qBox = document.getElementById('question-payload');
+            qBox.innerHTML = window.state.activeExam.questions.map((q, i) => `
+                <div class="bg-white p-8 rounded-[2.5rem] border shadow-sm max-w-3xl mx-auto">
+                    <p class="text-lg font-bold mb-6">${i+1}. ${q.text}</p>
+                    <div class="grid gap-3">
+                        ${q.options.map((opt, oi) => `
+                            <div onclick="selectOption(${i}, ${oi})" id="q-${i}-opt-${oi}" class="option-card p-4 rounded-2xl flex items-center gap-4">
+                                <div class="w-5 h-5 border-2 rounded-full"></div>
+                                <span class="font-medium">${opt}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            renderMathInElement(qBox, { delimiters: [{left: '$', right: '$', display: false}] });
+
+            let time = window.state.activeExam.duration * 60;
+            window.state.timer = setInterval(() => {
+                let m = Math.floor(time / 60), s = time % 60;
+                document.getElementById('exam-timer').innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                if(time-- <= 0) window.processSubmission();
+            }, 1000);
+            window.updateProgress(100);
+        };
+
+        window.selectOption = (qi, oi) => {
+            window.state.answers[qi] = oi;
+            document.querySelectorAll(`[id^="q-${qi}-opt-"]`).forEach(el => el.classList.remove('option-selected'));
+            document.getElementById(`q-${qi}-opt-${oi}`).classList.add('option-selected');
+        };
+
+        window.processSubmission = async () => {
+            clearInterval(window.state.timer);
+            window.updateProgress(60, "জমা হচ্ছে...");
+            let score = 0;
+            window.state.activeExam.questions.forEach((q, i) => {
+                if(window.state.answers[i] === q.correct) score++;
+                else if(window.state.answers[i] !== undefined) score -= window.state.activeExam.negMark;
+            });
+            await addDoc(collection(db, "results"), {
+                uid: window.state.user.uid, student: window.state.user.displayName,
+                examId: window.state.activeExam.id, examTitle: window.state.activeExam.title,
+                score, answers: window.state.answers, timestamp: serverTimestamp()
+            });
+            alert(`পরীক্ষা শেষ! স্কোর: ${score}`);
+            window.navigate('home');
+        };
+
+        // Results
+        async function syncResults() {
+            const q = query(collection(db, "results"), where("uid", "==", window.state.user.uid), orderBy("timestamp", "desc"));
+            const snap = await getDocs(q);
+            const container = document.getElementById('results-container');
+            container.innerHTML = '';
+            snap.forEach(d => {
+                const res = d.data();
+                container.innerHTML += `
+                    <div class="bg-white p-6 rounded-[2rem] border flex justify-between items-center shadow-sm">
+                        <div><h4 class="font-bold text-indigo-600">${res.examTitle}</h4><p class="text-xs font-black">Score: ${res.score}</p></div>
+                        <button onclick="generatePDF('${res.student}', '${res.examTitle}', '${res.score}')" class="bg-black text-white px-5 py-2 rounded-xl text-xs font-bold uppercase">Certificate</button>
+                    </div>`;
+            });
+        }
+
+        window.generatePDF = (name, exam, score) => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('landscape');
+            doc.setFillColor(30, 41, 59); doc.rect(0, 0, 297, 210, 'F');
+            doc.setTextColor(255, 255, 255); doc.setFontSize(40); doc.text("CERTIFICATE", 148, 70, null, null, 'center');
+            doc.setTextColor(99, 102, 241); doc.setFontSize(30); doc.text(name, 148, 110, null, null, 'center');
+            doc.setTextColor(255, 255, 255); doc.setFontSize(16); doc.text(`Exam: ${exam} | Score: ${score}`, 148, 140, null, null, 'center');
+            doc.save(`Cert_${name}.pdf`);
+        };
+
+        // Admin
+        window.checkAdmin = () => {
+            const p = prompt("Admin Key:");
+            if(p === 'admin123') window.navigate('admin');
+            else if(p !== null) alert("Denied!");
+        };
+
+        async function syncAdmin() {
+            const resSnap = await getDocs(collection(db, "results"));
+            const examSnap = await getDocs(collection(db, "exams"));
+            
+            document.getElementById('stat-total').innerText = resSnap.size;
+            
+            const examList = document.getElementById('admin-exams-list');
+            examList.innerHTML = '';
+            examSnap.forEach(d => {
+                const ex = d.data();
+                examList.innerHTML += `
+                    <div class="p-4 bg-slate-50 rounded-2xl flex justify-between items-center border">
+                        <div><span class="font-bold">${ex.title}</span> <span class="text-[10px] text-slate-400 ml-2">${ex.duration} MIN</span></div>
+                        <button onclick="deleteExam('${d.id}')" class="text-red-500 font-bold text-xs hover:underline">Delete Exam</button>
+                    </div>`;
+            });
+        }
+
+        window.publishExam = async () => {
+            window.updateProgress(50, "পাবলিশ হচ্ছে...");
+            const title = document.getElementById('adm-title').value;
+            const dur = document.getElementById('adm-dur').value;
+            const neg = document.getElementById('adm-neg').value || 0;
+            const pass = document.getElementById('adm-pass').value;
+            const bulk = document.getElementById('adm-bulk').value;
+
+            const questions = bulk.trim().split('\n').map(line => {
+                const parts = line.split('|').map(p => p.trim());
+                return { text: parts[0], options: [parts[1], parts[2], parts[3], parts[4]], correct: parseInt(parts[5]) };
+            });
+
+            await addDoc(collection(db, "exams"), {
+                title, duration: parseInt(dur), negMark: parseFloat(neg), password: pass,
+                questions, createdAt: serverTimestamp()
+            });
+            alert("Published!");
+            window.navigate('home');
+        };
+
+        window.deleteExam = async (id) => {
+            if(confirm("এই পরীক্ষাটি কি মুছে ফেলতে চান?")) {
+                await deleteDoc(doc(db, "exams", id));
+                syncAdmin();
+            }
+        };
+
+        window.updateProgress(100);
+    </script>
+</body>
+</html>
